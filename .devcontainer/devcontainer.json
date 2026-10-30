@@ -1,0 +1,10 @@
+{
+  "name": "World Building",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm ci && npm run build",
+  "postAttachCommand": "npm start",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "World Building", "onAutoForward": "openBrowser" }
+  }
+}

@@ -4,6 +4,8 @@ Atelier **local** de construction de mondes et d'écriture : des mondes isolés,
 
 ## Démarrer
 
+**Essai en un clic** : [ouvrir dans GitHub Codespaces](https://codespaces.new/Zampanotti/world-building-claude). L'application s'installe, se compile et s'ouvre toute seule dans un onglet (port 3000).
+
 Prérequis : **Node.js 22.13 ou plus récent** (SQLite est intégré à Node, aucune base à installer).
 
 ```bash
