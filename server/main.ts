@@ -1,6 +1,7 @@
 import { createServer, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { openDb, type DB } from "./db.ts";
 import { dispatch, FileResponse } from "./api.ts";
 import { HttpError } from "./errors.ts";
@@ -51,7 +52,9 @@ export function createApp(db: DB, opts: { dataDir: string | null; staticDir?: st
   });
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Lancé directement (et non importé par les tests). pathToFileURL est indispensable
+// sous Windows, où le chemin « P:\\… » ne ressemble pas à l'URL « file:///P:/… ».
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const dataDir = resolve(process.env.WB_DATA_DIR ?? "data");
   const db = openDb(join(dataDir, "worldbuilding.db"));
   const port = Number(process.env.PORT ?? 3000);
