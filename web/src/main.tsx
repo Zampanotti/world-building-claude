@@ -1,5 +1,7 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource-variable/literata/opsz.css";
+import "@fontsource-variable/literata/opsz-italic.css";
 import "./styles.css";
 import { useRoute } from "./router.ts";
 import { Toaster, useLoad, Loading, ErrorBox } from "./ui.tsx";

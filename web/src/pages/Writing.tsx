@@ -38,6 +38,8 @@ export function Writing({ wid, docId, query }: { wid: number; docId: number | nu
 
 function DocumentView({ wid, doc, sid, reload }: { wid: number; doc: Doc; sid: number | null; reload: () => void }) {
   const [mode, setMode] = useState<"edit" | "read">(sid ? "edit" : "read");
+  // Un lien vers une section (recherche, citations…) l'ouvre en édition, même depuis la lecture continue.
+  useEffect(() => { if (sid) setMode("edit"); }, [sid]);
   const [newTitle, setNewTitle] = useState("");
   const children = (p: number | null) => doc.sections.filter((s) => s.parentId === p).sort((a, b) => a.position - b.position);
   const open = (id: number) => { setMode("edit"); go(`/w/${wid}/documents/${doc.id}?section=${id}`); };

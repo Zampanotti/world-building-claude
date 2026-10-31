@@ -2,7 +2,8 @@
   --bg: #f7f5f0; --panel: #ffffff; --panel-2: #f1eee7; --text: #1f2328; --muted: #6b6f76; --border: #e2ddd2;
   --accent: #4f46e5; --accent-2: #eef0ff; --danger: #c2410c; --danger-bg: #fff3ec; --ok: #15803d; --warn: #a16207; --warn-bg: #fffbeb;
   --radius: 10px; --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 16px rgb(0 0 0 / .04);
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  /* Literata : serif moderne dessinée pour la lecture longue sur écran, embarquée avec l'application. */
+  --serif: "Literata Variable", Georgia, serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
