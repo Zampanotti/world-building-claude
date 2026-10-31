@@ -16,7 +16,7 @@ const SECTIONS: [string, string, React.ReactNode][] = [
     <p>Mise en forme : <code>**gras**</code>, <code>*italique*</code>, une ligne commençant par <code># </code> pour un titre, <code>&gt; </code> pour une citation, <code>- </code> pour une liste. Le bouton « Aperçu » montre le rendu.</p>
   </>],
   ["ecriture", "Documents", <>
-    <p>La page <strong>Écriture</strong> contient vos documents (roman, nouvelles, notes), découpés en <strong>sections imbriquées</strong> (parties, chapitres, scènes). Les flèches à côté de la section ouverte la déplacent ou la rangent sous la précédente. « Lecture continue » affiche tout le document d'un bloc.</p>
+    <p>La page <strong>Textes</strong>, qui s'ouvre en premier quand vous entrez dans un monde, contient vos documents (roman, nouvelles, notes), découpés en <strong>sections imbriquées</strong> (parties, chapitres, scènes). Les flèches à côté de la section ouverte la déplacent ou la rangent sous la précédente. « Lecture continue » affiche tout le document d'un bloc.</p>
     <p><strong>Autosauvegarde</strong> : chaque frappe est copiée dans un brouillon local du navigateur, puis envoyée au serveur après une seconde de pause. Si le serveur est injoignable, le brouillon est gardé et proposé à la réouverture (« Restaurer le brouillon »). Si la même section a été modifiée dans un autre onglet, rien n'est écrasé.</p>
     <p>Chaque fiche affiche « Citée dans l'écriture » : les passages des documents et des autres fiches qui la lient.</p>
   </>],

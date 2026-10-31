@@ -18,10 +18,11 @@ import { ArchivePage, ImportPanel } from "./pages/Archive.tsx";
 import { Reader } from "./pages/Reader.tsx";
 import { Help } from "./pages/Help.tsx";
 
+// Les textes passent en premier : c'est la page d'arrivée d'un monde.
 const NAV: [string, string, string][] = [
-  ["", "🏠", "Tableau de bord"],
+  ["documents", "✒️", "Textes"],
   ["entities", "📇", "Fiches"],
-  ["documents", "✒️", "Écriture"],
+  ["dashboard", "🏠", "Tableau de bord"],
   ["maps", "🗺️", "Cartes"],
   ["chronology", "⏳", "Chronologie"],
   ["media", "🖼️", "Médiathèque"],
@@ -38,7 +39,7 @@ function WorldLayout({ wid, path, query }: { wid: number; path: string[]; query:
   if (world.error) return <div className="main"><ErrorBox error={world.error} retry={world.reload} /><p><a href="#/">← Mes mondes</a></p></div>;
   let page;
   switch (section) {
-    case "": page = <Dashboard wid={wid} />; break;
+    case "dashboard": page = <Dashboard wid={wid} />; break;
     case "entities": page = path[1] ? <EntityPage key={path[1]} wid={wid} id={Number(path[1])} /> : <Explorer wid={wid} query={query} />; break;
     case "types": page = <TypesPage wid={wid} />; break;
     case "documents": page = <Writing wid={wid} docId={path[1] ? Number(path[1]) : null} query={query} />; break;
@@ -48,7 +49,7 @@ function WorldLayout({ wid, path, query }: { wid: number; path: string[]; query:
     case "search": page = <SearchPage wid={wid} query={query} />; break;
     case "archive": page = <ArchivePage wid={wid} />; break;
     case "settings": page = <WorldSettings wid={wid} onChange={world.reload} />; break;
-    default: page = <p>Page inconnue. <a href={`#/w/${wid}`}>Retour au tableau de bord</a></p>;
+    default: page = <p>Page inconnue. <a href={`#/w/${wid}`}>Retour aux textes</a></p>;
   }
   return (
     <div className="layout">
@@ -75,8 +76,12 @@ function WorldLayout({ wid, path, query }: { wid: number; path: string[]; query:
 function App() {
   const { path, query } = useRoute();
   useEffect(() => { if (path[0] !== "w") document.title = "World Building"; window.scrollTo(0, 0); }, [path.join("/")]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Entrer dans un monde ouvre ses textes (sans ajouter d'étape à l'historique).
+  const worldRoot = path[0] === "w" && path[1] && path.length === 2;
+  useEffect(() => { if (worldRoot) location.replace(`#/w/${path[1]}/documents`); }, [worldRoot, path[1]]); // eslint-disable-line react-hooks/exhaustive-deps
   let content;
-  if (path[0] === "w" && path[1]) content = <WorldLayout key={path[1]} wid={Number(path[1])} path={path.slice(2)} query={query} />;
+  if (worldRoot) content = null;
+  else if (path[0] === "w" && path[1]) content = <WorldLayout key={path[1]} wid={Number(path[1])} path={path.slice(2)} query={query} />;
   else if (path[0] === "read" && path[1]) content = <Reader wid={Number(path[1])} id={path[2] ? Number(path[2]) : null} />;
   else if (path[0] === "aide") content = <Help />;
   else if (path[0] === "import") content = <div className="hero"><p><a href="#/">← Mes mondes</a></p><h1>Importer un monde</h1><ImportPanel /></div>;

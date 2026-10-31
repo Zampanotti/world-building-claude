@@ -17,7 +17,7 @@ export function Writing({ wid, docId, query }: { wid: number; docId: number | nu
   if (!doc) {
     return (
       <div className="stack">
-        <h1>Écriture</h1>
+        <h1>Textes</h1>
         <form className="card row" onSubmit={async (e) => { e.preventDefault(); const r = await api<{ id: number; sectionId: number }>("POST", w(wid, "/documents"), { title }); go(`/w/${wid}/documents/${r.id}?section=${r.sectionId}`); }}>
           <input className="grow" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre d'un nouveau document (roman, nouvelle, notes…)" />
           <button className="btn primary" disabled={!title.trim()}>Créer</button>

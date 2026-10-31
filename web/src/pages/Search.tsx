@@ -29,7 +29,7 @@ export function SearchPage({ wid, query }: { wid: number; query: URLSearchParams
     history.replaceState(null, "", `#/w/${wid}/search?${new URLSearchParams({ q, scope })}`);
     return () => clearTimeout(t);
   }, [q, scope, wid]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tabs: [string, string][] = [["all", "Tout"], ["world", "Fiches"], ["writing", "Écriture"]];
+  const tabs: [string, string][] = [["all", "Tout"], ["world", "Fiches"], ["writing", "Textes"]];
   return (
     <div className="stack">
       <h1>Recherche</h1>
