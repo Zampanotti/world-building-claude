@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, w } from "../api.ts";
 import { go } from "../router.ts";
 import { useLoad, Loading, ErrorBox, TypeBadge, ConfirmButton, toast, EntityPicker } from "../ui.tsx";
+import { FONTS, getFont, setFont, type FontId } from "../display.ts";
 
 type Overview = {
   world: { id: number; name: string; description: string };
@@ -76,6 +77,7 @@ export function WorldSettings({ wid, onChange }: { wid: number; onChange: () => 
         {error && <ErrorBox error={error} />}
         <div className="row end"><button className="btn primary">Enregistrer</button></div>
       </form>
+      <DisplaySettings />
       <div className="card stack">
         <h2>Supprimer ce monde</h2>
         <p className="muted small">Toutes ses fiches, relations, images, cartes et textes seront retirés. Une copie complète de la base est faite avant, dans <code>data/backups/</code>. Pensez aussi à exporter le monde depuis « Sauvegarde ».</p>
@@ -85,6 +87,26 @@ export function WorldSettings({ wid, onChange }: { wid: number; onChange: () => 
             message={<p>Le monde « {world.name} » sera supprimé. Cette action ne peut pas être annulée depuis l'application.</p>}
             onConfirm={async () => { await api("DELETE", w(wid), { confirmName: confirm }); toast("Monde supprimé (copie de sécurité faite)."); go("/"); }} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Choix de la police des textes : enregistré sur cet appareil, pour tous les mondes. */
+export function DisplaySettings() {
+  const [font, setFontState] = useState<FontId>(getFont);
+  return (
+    <div className="card stack" id="affichage">
+      <h2>Affichage</h2>
+      <p className="muted small">Police des textes, des fiches et des titres. Ce réglage vaut pour tous les mondes, sur cet appareil.</p>
+      <div className="font-choices" role="radiogroup" aria-label="Police des textes">
+        {FONTS.map((f) => (
+          <label key={f.id} className={`font-choice ${font === f.id ? "active" : ""}`}>
+            <input type="radio" name="font" checked={font === f.id} onChange={() => { setFont(f.id); setFontState(f.id); }} />
+            <span className="sample" style={{ fontFamily: f.family }}>{f.label}<em> — La nuit était tombée sur Aldémar.</em></span>
+            <span className="muted small">{f.note}</span>
+          </label>
+        ))}
       </div>
     </div>
   );

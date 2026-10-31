@@ -176,3 +176,10 @@ mark { background: #fde68a; color: #1f2328; border-radius: 2px; padding: 0 1px; 
 .help dd { margin: 0 0 .3rem; }
 .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #111827; color: white; padding: .6rem 1rem; border-radius: 10px; z-index: 60; box-shadow: 0 8px 24px rgb(0 0 0 / .3); max-width: 90vw; }
 .table-wrap { overflow-x: auto; max-width: 100%; }
+/* Réglages d'affichage */
+.font-choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .6rem; }
+.font-choice { color: var(--text); display: grid; grid-template-columns: auto 1fr; gap: .2rem .6rem; align-items: baseline; padding: .7rem .8rem; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; }
+.font-choice.active { border-color: var(--accent); background: var(--accent-2); }
+.font-choice .sample { font-size: 1.1rem; font-weight: 600; }
+.font-choice .sample em { font-weight: 400; }
+.font-choice .muted { grid-column: 2; }

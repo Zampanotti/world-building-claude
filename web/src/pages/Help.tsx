@@ -48,6 +48,7 @@ const SECTIONS: [string, string, React.ReactNode][] = [
   ["sauvegarde", "Sauvegarde", <>
     <p>« Sauvegarde » exporte un monde dans un fichier <code>.json</code> (images comprises si vous le souhaitez) et importe un fichier dans un <strong>nouveau</strong> monde, sans jamais toucher aux mondes existants.</p>
     <p>Toutes les données sont dans le dossier <code>data/</code> de l'application : copiez-le, application arrêtée, pour une sauvegarde complète.</p>
+    <p>La <strong>police des textes</strong> (Literata, Source Serif, Inter ou Classique) se choisit dans « Réglages du monde », rubrique « Affichage ». Le choix vaut pour tous les mondes, sur cet appareil.</p>
   </>],
 ];
 

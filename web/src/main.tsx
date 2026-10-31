@@ -1,8 +1,7 @@
 import { StrictMode, useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import "@fontsource-variable/literata/opsz.css";
-import "@fontsource-variable/literata/opsz-italic.css";
 import "./styles.css";
+import { applyFont } from "./display.ts";
 import { useRoute } from "./router.ts";
 import { Toaster, useLoad, Loading, ErrorBox } from "./ui.tsx";
 import { api, w } from "./api.ts";
@@ -91,4 +90,5 @@ function App() {
   return <>{content}<Toaster /></>;
 }
 
+applyFont();
 createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
