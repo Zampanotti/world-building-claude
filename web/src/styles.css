@@ -108,7 +108,11 @@ th { font-weight: 600; font-size: .85rem; color: var(--muted); }
 .elink:hover { text-decoration: none; background: var(--accent-2); }
 .elink.broken { color: var(--danger); border-bottom-color: var(--danger); text-decoration: line-through; }
 .editor { position: relative; }
-.editor textarea { font-family: var(--serif); font-size: 1.05rem; line-height: 1.65; min-height: 220px; padding: .8em 1em; }
+.editor .rich-input { font-family: var(--serif); font-size: 1.05rem; line-height: 1.65; min-height: 220px; padding: .8em 1em; white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; overflow-y: auto; max-height: 75vh; cursor: text; }
+.editor .rich-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.editor .rich-input:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
+.editor .rich-input .elink { cursor: default; border-radius: 3px; padding: 0 .1em; background: var(--accent-2); }
 .editor .toolbar { display: flex; gap: .3rem; flex-wrap: wrap; margin-bottom: .4rem; }
 .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }

@@ -27,6 +27,25 @@ export function linkedIds(text: string): number[] {
   return [...ids];
 }
 
+export type Segment = { kind: "text"; text: string } | { kind: "link"; id: number; label: string; raw: string };
+
+/**
+ * Découpe un texte en morceaux de texte brut et en liens. Recoller les `text`
+ * et les `raw` dans l'ordre redonne exactement le texte d'origine : l'éditeur
+ * s'en sert pour afficher les liens comme des liens sans perdre leur balisage.
+ */
+export function splitLinks(text: string): Segment[] {
+  const out: Segment[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK_RE)) {
+    if (m.index > last) out.push({ kind: "text", text: text.slice(last, m.index) });
+    out.push({ kind: "link", id: Number(m[1]), label: m[2], raw: m[0] });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ kind: "text", text: text.slice(last) });
+  return out;
+}
+
 /**
  * Convertit les identifiants des liens (import d'archive). Un identifiant absent
  * de la table devient 0, qui ne désigne jamais une fiche : une référence déjà

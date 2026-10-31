@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { LINK_RE, linkMarkup } from "../../shared/richtext.ts";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { LINK_RE, linkMarkup, splitLinks } from "../../shared/richtext.ts";
 import { api, w } from "./api.ts";
 import { EntityPicker, Modal, ErrorBox, toast, type Suggestion } from "./ui.tsx";
 
@@ -58,18 +58,111 @@ export function RichText({ text, names, href }: { text: string; names: Names; hr
 type TypeOpt = { id: number; name: string };
 
 /**
+ * Zone d'édition : le texte reste du balisage `[[id|libellé]]`, mais chaque lien
+ * est affiché comme une pastille non modifiable portant le nom actuel de la fiche.
+ * Le DOM n'est reconstruit que lorsque la valeur change de l'extérieur (lien
+ * inséré, brouillon restauré…) : pendant la frappe, le navigateur garde la main,
+ * ce qui préserve le curseur et l'annulation native.
+ */
+function paint(el: HTMLElement, value: string, names: Names) {
+  el.replaceChildren();
+  for (const seg of splitLinks(value)) {
+    if (seg.kind === "text") { el.append(document.createTextNode(seg.text)); continue; }
+    const chip = document.createElement("span");
+    const name = names[seg.id];
+    chip.className = name === undefined ? "elink broken" : "elink";
+    chip.contentEditable = "false";
+    chip.dataset.markup = seg.raw;
+    chip.title = name === undefined ? "Lien cassé : la fiche n'existe plus" : "Lien vers une fiche";
+    chip.textContent = name ?? seg.label;
+    el.append(chip);
+  }
+  // Un saut de ligne final n'est visible que suivi d'un <br>, ignoré à la relecture.
+  if (value.endsWith("\n")) { const br = document.createElement("br"); br.dataset.end = ""; el.append(br); }
+}
+
+/** Relit le balisage à partir du DOM (ou d'un fragment) de la zone d'édition. */
+function serialize(node: Node): string {
+  let out = "";
+  node.childNodes.forEach((c, i) => {
+    if (c.nodeType === Node.TEXT_NODE) out += (c as Text).data;
+    else if (c instanceof HTMLElement) {
+      if (c.dataset.markup !== undefined) out += c.dataset.markup;
+      else if (c.tagName === "BR") { if (c.dataset.end === undefined && !(c === node.lastChild && out.endsWith("\n"))) out += "\n"; }
+      else if (c.tagName === "DIV" || c.tagName === "P") out += (i > 0 && !out.endsWith("\n") ? "\n" : "") + serialize(c);
+      else out += serialize(c);
+    }
+  });
+  return out;
+}
+
+/** Position d'un point du DOM, comptée en caractères du balisage. */
+function offsetOf(el: HTMLElement, node: Node, offset: number): number {
+  const r = document.createRange();
+  r.selectNodeContents(el);
+  r.setEnd(node, offset);
+  return serialize(r.cloneContents()).length;
+}
+
+/** Place le curseur à une position du balisage (DOM tel que peint par `paint`). */
+function placeCaret(el: HTMLElement, pos: number) {
+  const r = document.createRange();
+  let left = pos;
+  let done = false;
+  for (const c of Array.from(el.childNodes)) {
+    const len = c.nodeType === Node.TEXT_NODE ? (c as Text).data.length : (c as HTMLElement).dataset.markup?.length ?? 0;
+    if (c.nodeType === Node.TEXT_NODE && left <= len) { r.setStart(c, left); done = true; break; }
+    if (c.nodeType !== Node.TEXT_NODE && len && left < len) { r.setStartBefore(c); done = true; break; }
+    left -= len;
+  }
+  if (!done) { r.selectNodeContents(el); r.collapse(false); }
+  r.collapse(true);
+  const sel = getSelection();
+  sel?.removeAllRanges();
+  sel?.addRange(r);
+}
+
+/**
  * Éditeur du texte éditorial : une zone de texte avec barre d'outils.
  * - « [[ » ouvre la recherche de fiches et insère un lien stable (identifiant) ;
  * - « Créer une fiche » transforme la sélection en nouvelle fiche liée.
  */
 export function RichEditor({ wid, value, onChange, names, onNames, minHeight = 260, placeholder }:
   { wid: number; value: string; onChange: (v: string) => void; names: Names; onNames: (n: Names) => void; minHeight?: number; placeholder?: string }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const shown = useRef<{ value: string; names: Names } | null>(null);
+  const sel = useRef({ start: 0, end: 0 });
+  const caretAfterPaint = useRef<number | null>(null);
   const [preview, setPreview] = useState(false);
   const [ac, setAc] = useState<{ q: string; start: number } | null>(null);
   const [acItems, setAcItems] = useState<Suggestion[]>([]);
   const [acSel, setAcSel] = useState(0);
   const [modal, setModal] = useState<null | { kind: "link" | "create"; start: number; end: number; text: string }>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current!;
+    if (shown.current?.value === value && shown.current.names === names) return;
+    const focused = document.activeElement === el;
+    const caret = caretAfterPaint.current ?? (focused ? sel.current.end : null);
+    caretAfterPaint.current = null;
+    paint(el, value, names);
+    shown.current = { value, names };
+    if (caret !== null) { el.focus(); placeCaret(el, caret); readSelection(); }
+  }, [value, names]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Mémorise la sélection : les boutons de la barre d'outils s'en servent. */
+  const readSelection = () => {
+    const el = ref.current;
+    const s = getSelection();
+    if (!el || !s || !s.rangeCount) return;
+    const r = s.getRangeAt(0);
+    if (!el.contains(r.startContainer) || !el.contains(r.endContainer)) return;
+    sel.current = { start: offsetOf(el, r.startContainer, r.startOffset), end: offsetOf(el, r.endContainer, r.endOffset) };
+  };
+  useEffect(() => {
+    document.addEventListener("selectionchange", readSelection);
+    return () => document.removeEventListener("selectionchange", readSelection);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!ac) return;
@@ -78,42 +171,47 @@ export function RichEditor({ wid, value, onChange, names, onNames, minHeight = 2
     return () => { live = false; };
   }, [ac?.q, wid]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /** Texte affiché : en avance sur `value` tant que React n'a pas rendu la dernière frappe. */
+  const current = () => shown.current?.value ?? value;
   const replace = (start: number, end: number, insert: string) => {
-    const next = value.slice(0, start) + insert + value.slice(end);
-    onChange(next);
-    requestAnimationFrame(() => { const t = ref.current; if (t) { t.focus(); t.selectionStart = t.selectionEnd = start + insert.length; } });
+    const v = current();
+    caretAfterPaint.current = start + insert.length;
+    onChange(v.slice(0, start) + insert + v.slice(end));
   };
   const insertLink = (s: { id: number; name: string }, start: number, end: number, label?: string) => {
     onNames({ ...names, [s.id]: s.name });
     replace(start, end, linkMarkup(s.id, label || s.name));
   };
-  const detectAc = () => {
-    const t = ref.current!;
-    // Lu dans la zone de texte elle-même : l'état React peut avoir une frappe de retard.
-    const before = t.value.slice(0, t.selectionStart);
-    const m = before.match(/\[\[([^[\]|\n]{0,40})$/);
-    setAc(m ? { q: m[1], start: t.selectionStart - m[0].length } : null);
+  const onInput = () => {
+    const el = ref.current!;
+    const v = serialize(el);
+    shown.current = { value: v, names };
+    readSelection();
+    onChange(v);
+    // Lu dans le DOM lui-même : l'état React peut avoir une frappe de retard.
+    const m = v.slice(0, sel.current.end).match(/\[\[([^[\]|\n]{0,40})$/);
+    setAc(m ? { q: m[1], start: sel.current.end - m[0].length } : null);
   };
   const wrap = (mark: string) => {
-    const t = ref.current!;
-    const { selectionStart: a, selectionEnd: b } = t;
-    replace(a, b, mark + (value.slice(a, b) || "texte") + mark);
+    const { start: a, end: b } = sel.current;
+    replace(a, b, mark + (current().slice(a, b) || "texte") + mark);
   };
   const linePrefix = (prefix: string) => {
-    const t = ref.current!;
-    const a = value.lastIndexOf("\n", t.selectionStart - 1) + 1;
-    onChange(value.slice(0, a) + prefix + value.slice(a));
+    const v = current();
+    const a = v.lastIndexOf("\n", sel.current.start - 1) + 1;
+    caretAfterPaint.current = sel.current.end + prefix.length;
+    onChange(v.slice(0, a) + prefix + v.slice(a));
   };
   const openModal = (kind: "link" | "create") => {
-    const t = ref.current!;
-    const text = value.slice(t.selectionStart, t.selectionEnd);
+    const { start, end } = sel.current;
+    const text = current().slice(start, end);
     if (kind === "create" && !text.trim()) { toast("Sélectionnez d'abord le nom de la fiche dans le texte."); return; }
-    setModal({ kind, start: t.selectionStart, end: t.selectionEnd, text });
+    setModal({ kind, start, end, text });
   };
 
   return (
     <div className="editor">
-      <div className="toolbar">
+      <div className="toolbar" onMouseDown={(e) => e.preventDefault()}>
         <button className="btn small" type="button" onClick={() => wrap("**")} title="Gras"><b>G</b></button>
         <button className="btn small" type="button" onClick={() => wrap("*")} title="Italique"><i>I</i></button>
         <button className="btn small" type="button" onClick={() => linePrefix("# ")} title="Titre">Titre</button>
@@ -125,21 +223,27 @@ export function RichEditor({ wid, value, onChange, names, onNames, minHeight = 2
       </div>
       <div className={preview ? "split" : ""}>
         <div style={{ position: "relative" }}>
-          <textarea ref={ref} value={value} placeholder={placeholder ?? "Écrivez ici… Tapez [[ pour lier une fiche."} style={{ minHeight }}
-            onChange={(e) => { onChange(e.target.value); requestAnimationFrame(detectAc); }}
+          <div ref={ref} className="rich-input" contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true"
+            data-placeholder={placeholder ?? "Écrivez ici… Tapez [[ pour lier une fiche."} style={{ minHeight }}
+            onInput={onInput}
+            onPaste={(e) => { e.preventDefault(); replace(sel.current.start, sel.current.end, e.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n")); }}
+            onDrop={(e) => e.preventDefault()}
             onKeyDown={(e) => {
-              if (!ac || !acItems.length) return;
-              if (e.key === "ArrowDown") { setAcSel((s) => Math.min(s + 1, acItems.length - 1)); e.preventDefault(); }
-              else if (e.key === "ArrowUp") { setAcSel((s) => Math.max(s - 1, 0)); e.preventDefault(); }
-              else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertLink(acItems[acSel], ac.start, ref.current!.selectionStart); setAc(null); }
-              else if (e.key === "Escape") setAc(null);
+              if (ac && acItems.length) {
+                if (e.key === "ArrowDown") { setAcSel((s) => Math.min(s + 1, acItems.length - 1)); e.preventDefault(); return; }
+                if (e.key === "ArrowUp") { setAcSel((s) => Math.max(s - 1, 0)); e.preventDefault(); return; }
+                if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); insertLink(acItems[acSel], ac.start, sel.current.end); setAc(null); return; }
+                if (e.key === "Escape") { setAc(null); return; }
+              }
+              if (e.key === "Enter") { e.preventDefault(); replace(sel.current.start, sel.current.end, "\n"); }
+              else if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "i")) { e.preventDefault(); wrap(e.key === "b" ? "**" : "*"); }
             }}
             onBlur={() => setTimeout(() => setAc(null), 150)} />
           {ac && acItems.length > 0 && (
             <div className="popup" style={{ left: 12, top: 40 }}>
               <div className="muted small" style={{ padding: ".3em .7em" }}>Lier une fiche — Entrée pour choisir</div>
               {acItems.map((s, i) => (
-                <button key={s.id} className={i === acSel ? "sel" : ""} onMouseDown={(e) => { e.preventDefault(); insertLink(s, ac.start, ref.current!.selectionStart); setAc(null); }}>
+                <button key={s.id} className={i === acSel ? "sel" : ""} onMouseDown={(e) => { e.preventDefault(); insertLink(s, ac.start, sel.current.end); setAc(null); }}>
                   <span className="dot" style={{ background: s.typeColor ?? "#999" }} />{s.name}
                 </button>
               ))}
