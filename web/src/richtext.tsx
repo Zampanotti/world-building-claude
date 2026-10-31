@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { LINK_RE, linkMarkup, splitLinks } from "../../shared/richtext.ts";
 import { api, w } from "./api.ts";
+import { go } from "./router.ts";
 import { EntityPicker, Modal, ErrorBox, toast, type Suggestion } from "./ui.tsx";
 
 type Names = Record<number, string>;
@@ -73,7 +74,8 @@ function paint(el: HTMLElement, value: string, names: Names) {
     chip.className = name === undefined ? "elink broken" : "elink";
     chip.contentEditable = "false";
     chip.dataset.markup = seg.raw;
-    chip.title = name === undefined ? "Lien cassé : la fiche n'existe plus" : "Lien vers une fiche";
+    if (name !== undefined) chip.dataset.id = String(seg.id);
+    chip.title = name === undefined ? "Lien cassé : la fiche n'existe plus" : `Ouvrir la fiche « ${name} »`;
     chip.textContent = name ?? seg.label;
     el.append(chip);
   }
@@ -237,6 +239,14 @@ export function RichEditor({ wid, value, onChange, names, onNames, minHeight = 2
               }
               if (e.key === "Enter") { e.preventDefault(); replace(sel.current.start, sel.current.end, "\n"); }
               else if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "i")) { e.preventDefault(); wrap(e.key === "b" ? "**" : "*"); }
+            }}
+            onClick={(e) => {
+              // Une pastille ouvre sa fiche (Ctrl/⌘ + clic : dans un nouvel onglet).
+              const id = (e.target as HTMLElement).closest<HTMLElement>("[data-id]")?.dataset.id;
+              if (!id) return;
+              e.preventDefault();
+              const href = `#/w/${wid}/entities/${id}`;
+              if (e.ctrlKey || e.metaKey) open(href, "_blank"); else go(href);
             }}
             onBlur={() => setTimeout(() => setAc(null), 150)} />
           {ac && acItems.length > 0 && (
